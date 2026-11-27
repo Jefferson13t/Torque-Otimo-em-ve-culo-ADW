@@ -289,6 +289,81 @@ def dijkstra_reverso(grid: list[list[int]], destino: tuple[int, int]):
     return resultado
 
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def plot_vector_field(policy, cell_width=1.0, figsize=(10, 10)):
+    """
+    Plota o campo vetorial de uma política de navegação em uma grade.
+
+    Args:
+        policy (dict):
+            Dicionário em que cada chave representa uma célula (linha, coluna)
+            e o valor representa a próxima célula desejada.
+            Células com valor None representam o destino.
+
+        cell_width (float):
+            Dimensão de cada célula da grade.
+
+        figsize (tuple):
+            Dimensões da figura.
+    """
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    for (row, col), next_cell in policy.items():
+
+        x = (col + 0.5) * cell_width
+        y = (row + 0.5) * cell_width
+
+        # Destino
+        if next_cell is None:
+            ax.scatter(x, y, color="red", s=100, marker="*",
+                       label="Destino")
+            continue
+
+        next_row, next_col = next_cell
+
+        # Vetor de deslocamento
+        dx = (next_col - col) * cell_width
+        dy = (next_row - row) * cell_width
+
+        ax.quiver(
+            x, y,
+            dx, dy,
+            angles="xy",
+            scale_units="xy",
+            scale=1,
+            color="blue",
+            width=0.003
+        )
+
+    # Configuração da grade
+    rows = [cell[0] for cell in policy]
+    cols = [cell[1] for cell in policy]
+
+    ax.set_xticks(np.arange(min(cols), max(cols) + 1) * cell_width)
+    ax.set_yticks(np.arange(min(rows), max(rows) + 1) * cell_width)
+
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.set_aspect("equal")
+
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_title("Campo Vetorial da Política de Navegação")
+
+    # Inverter eixo Y para manter convenção da matriz (linha, coluna)
+    ax.invert_yaxis()
+
+    # Evitar entradas duplicadas na legenda
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
+
+    plt.tight_layout()
+    plt.show()
+
 def plot_trajectory(
     grid: list[list[int]],
     CELL_WIDTH: float,

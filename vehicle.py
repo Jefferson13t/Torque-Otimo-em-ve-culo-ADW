@@ -89,50 +89,7 @@ def generate_torque_reference(
     Kd_psi: float = 2.0,
     Kp_v: float = 20.0
 ) -> tuple[list[WeelTork], list[Vehicle_state]]:
-    """
-    Gera referências de torque para as rodas do veículo a partir de um
-    caminho definido por waypoints, utilizando controladores de orientação
-    PD e velocidade proporcional (P).
-
-    A função converte os waypoints da grade em coordenadas cartesianas,
-    calcula as referências de força longitudinal e momento de guinada
-    e as converte em torques aplicados ao modelo dinâmico do veículo.
-    A simulação termina quando o destino é alcançado ou após 10000 iterações.
-
-    Args:
-        caminho (list[tuple[int, int]]): Lista de waypoints no formato
-            (linha, coluna), representando o caminho desejado.
-        estado_inicial (Vehicle_state): Estado inicial do veículo,
-            contendo posição, orientação e velocidades.
-        params (CarParams): Parâmetros físicos do veículo utilizados
-            no cálculo dos torques e na simulação dinâmica.
-        cell_width (float): Dimensão da célula da grade, em metros.
-            Utilizada na conversão dos waypoints e nas tolerâncias
-            de distância para avanço e chegada.
-        dt (float, optional): Passo de tempo da simulação, em segundos.
-            Padrão: 0.01.
-        v_ref (float, optional): Velocidade longitudinal desejada,
-            em m/s. Padrão: 0.3.
-        Kp_psi (float, optional): Ganho proporcional do controlador
-            de orientação. Padrão: 1.0.
-        Kd_psi (float, optional): Ganho derivativo do controlador
-            de orientação. Padrão: 2.0.
-        Kp_v (float, optional): Ganho proporcional do controlador
-            de velocidade longitudinal. Padrão: 20.0.
-
-    Returns:
-        tuple[list[WeelTork], list[Vehicle_state]]:
-            - Lista de referências de torque para as rodas.
-            - Lista de estados do veículo calculados durante a simulação.
-
-    Raises:
-        ValueError: Se o caminho for None ou estiver vazio.
-
-    Notes:
-        A força longitudinal é limitada ao intervalo [0, 30] N e o
-        momento de guinada ao intervalo [-2, 2] N.m.
-        O erro angular é normalizado para [-pi, pi].
-    """
+    """Gera as referencias de torque necessária para ir de um ponto a outro."""
 
     torques_referencia = []
     estados_calculados = []

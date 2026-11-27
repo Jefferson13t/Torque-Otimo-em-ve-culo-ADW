@@ -11,13 +11,55 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 
 def build_cost_map(
-    width,
-    height,
-    obstacle_density=0.50,
-    n_regions=3,
-    smoothness=1.0,
-    seed=None
+    width: int,
+    height: int,
+    obstacle_density: float = 0.50,
+    n_regions: int = 3,
+    smoothness: float =1.0,
+    seed=None 
 ) -> list[list[int]]:
+    """
+    Gera um mapa de custos bidimensional representando o ambiente,
+    considerando a distribuição de obstáculos e regiões com diferentes
+    características de custo.
+
+    Parameters
+    ----------
+    width : int
+        Largura do mapa, expressa em número de células.
+
+    height : int
+        Altura do mapa, expressa em número de células.
+
+    obstacle_density : float, optional
+        Densidade de obstáculos no ambiente, expressa como uma fração
+        entre 0 e 1. Controla a proporção de células ocupadas por
+        obstáculos. O valor padrão é 0.50.
+
+    n_regions : int, optional
+        Número de regiões utilizadas na composição do mapa de custos.
+        Permite representar diferentes áreas com características
+        distintas de custo. O valor padrão é 3.
+
+    smoothness : float, optional
+        Parâmetro que controla a suavidade espacial da distribuição
+        dos custos no mapa. Valores maiores tendem a produzir
+        transições mais suaves entre regiões. O valor padrão é 1.0.
+
+    seed : int, optional
+        Semente utilizada pelo gerador de números aleatórios para
+        garantir a reprodutibilidade do mapa gerado. Quando None,
+        a geração utiliza uma semente aleatória. O valor padrão é None.
+
+    Returns
+    -------
+    list[list[int]]
+        Matriz bidimensional de custos, com dimensões height x width.
+        Cada elemento representa o custo associado à respectiva célula
+        do ambiente, podendo representar diferentes níveis de
+        dificuldade de navegação ou a presença de obstáculos.
+    """
+
 
     rng = np.random.default_rng(seed)
 
@@ -84,7 +126,23 @@ def build_cost_map(
     return cost_map.tolist()
 
 
-def dijkstra(grid, inicio, destino):
+def dijkstra(grid: list[list[int]], inicio: tuple[int, int], destino: tuple[int, int]):
+    """
+    Roda o dijkstra a partir da celula inicial e retorna o caminho até a celula final.
+
+    Parameters
+    ----------
+    grid : list[list[int]]
+        matriz de custo do ambiente
+
+    inicio : tuple[int, int]
+        celula de inicio
+
+    destino : tuple[int, int]
+        celula de destino
+
+    """
+
     linhas = len(grid)
     colunas = len(grid[0])
 
@@ -160,87 +218,107 @@ def dijkstra(grid, inicio, destino):
     return caminho[::-1]
 
 
-def next_cell_dijkstra(
-    grid,
-    estado: Vehicle_state,
-    destino: tuple[int, int],
-    cell_width: float
-):
+def dijkstra_reverso(grid: list[list[int]], destino: tuple[int, int]):
     """
-    Recalcula o caminho usando Dijkstra a partir da posição atual
-    do veículo e retorna a próxima célula a ser perseguida.
+    Roda o dijkstra a partir da celula de destino para calcular a distancia minima de todas as celulas até ela.
 
-    Retorna:
-        proxima_celula: próxima célula do caminho
-        caminho: caminho completo calculado
-        celula_atual: célula onde o veículo está
+    Parameters
+    ----------
+    grid : list[list[int]]
+        matriz de custo do ambiente
+
+    destino : tuple[int, int]
+        celula de destino
+
     """
 
     linhas = len(grid)
     colunas = len(grid[0])
 
-    # Converter posição (X,Y) em célula (linha,coluna)
-    linha = int(estado.Y // cell_width)
-    coluna = int(estado.X // cell_width)
+    movimentos = [
+        (-1,  0, 1.0),
+        ( 1,  0, 1.0),
+        ( 0, -1, 1.0),
+        ( 0,  1, 1.0),
+        (-1, -1, math.sqrt(2)),
+        (-1,  1, math.sqrt(2)),
+        ( 1, -1, math.sqrt(2)),
+        ( 1,  1, math.sqrt(2))
+    ]
 
-    celula_atual = (linha, coluna)
+    distancias = {destino: 0}
+    proximos = {}
+    fila = [(0, destino)]
 
-    # Verificar se está dentro do grid
-    if not (0 <= linha < linhas and 0 <= coluna < colunas):
-        return None, [], celula_atual
+    while fila:
+        custo_atual, atual = heapq.heappop(fila)
 
-    # Executar Dijkstra a partir da posição atual
-    caminho = dijkstra(
-        grid,
-        celula_atual,
-        destino
-    )
+        if custo_atual > distancias.get(atual, float('inf')):
+            continue
 
-    # Verificar se existe caminho
-    if not caminho:
-        return None, [], celula_atual
+        i, j = atual
 
-    # Selecionar próxima célula
-    if len(caminho) > 1:
-        proxima_celula = caminho[1]
-    else:
-        proxima_celula = celula_atual
+        for di, dj, distancia in movimentos:
+            ni, nj = i + di, j + dj
 
-    return proxima_celula, caminho, celula_atual
+            if not (0 <= ni < linhas and 0 <= nj < colunas):
+                continue
+
+            if grid[ni][nj] == 0:
+                continue
+
+            vizinho = (ni, nj)
+
+            novo_custo = custo_atual + grid[ni][nj] * distancia
+
+            if novo_custo < distancias.get(vizinho, float('inf')):
+                distancias[vizinho] = novo_custo
+                proximos[vizinho] = atual
+
+                heapq.heappush(
+                    fila,
+                    (novo_custo, vizinho)
+                )
+
+    # Objeto de consulta
+    resultado = {}
+
+    for celula, custo in distancias.items():
+        resultado[celula] = proximos.get(celula)
+
+    return resultado
+
 
 def plot_trajectory(
-    states: list[Vehicle_state],
     grid: list[list[int]],
-    path: list[tuple[int, int]],
-    CELL_WIDTH: float = 0.1,
+    CELL_WIDTH: float,
+    paths: list[list[Vehicle_state]],
 ) -> None:
+    """
+    Plota o grid do ambiente e os caminhos percorridos.
 
-    if not states:
-        raise ValueError("A lista de estados está vazia.")
+    Parameters
+    ----------
+    grid : list[list[int]]
+        matriz de custo do ambiente
+
+    CELL_WIDTH : float
+        tamanho de cada celula do ambiente
+
+    paths : list[list[Vehicle_state]]
+        lista de caminhos percorridos para plotagem
+
+    """
 
     if not grid or not grid[0]:
         raise ValueError("O grid está vazio.")
 
-    if not path:
-        raise ValueError("O caminho está vazio.")
+    if not paths:
+        raise ValueError("A lista de caminhos está vazia.")
 
-    # Extrair posições do veículo
-    X = np.array([state.X for state in states])
-    Y = np.array([state.Y for state in states])
-    psi = np.array([state.psi for state in states])
 
     grid = np.array(grid)
-
     rows, cols = grid.shape
-
-    # Coordenadas dos centros das células
-    path_X = np.array([
-        (j + 0.5) * CELL_WIDTH for i, j in path
-    ])
-
-    path_Y = np.array([
-        (i + 0.5) * CELL_WIDTH for i, j in path
-    ])
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -262,70 +340,87 @@ def plot_trajectory(
     )
 
     # Linhas do grid
-    ax.set_xticks(np.arange(0, cols * CELL_WIDTH + CELL_WIDTH, CELL_WIDTH))
-    ax.set_yticks(np.arange(0, rows * CELL_WIDTH + CELL_WIDTH, CELL_WIDTH))
+    ax.set_xticks(
+        np.arange(0, cols * CELL_WIDTH + CELL_WIDTH, CELL_WIDTH)
+    )
+    ax.set_yticks(
+        np.arange(0, rows * CELL_WIDTH + CELL_WIDTH, CELL_WIDTH)
+    )
 
     ax.grid(True, color='black', linewidth=0.5, alpha=0.4)
 
-    # Caminho do Dijkstra
-    ax.plot(
-        path_X,
-        path_Y,
-        color='orange',
-        linewidth=2,
-        linestyle='--',
-        marker='.',
-        markersize=5,
-        label='Caminho Dijkstra',
-        zorder=3
+    # Cores diferentes para cada trajetória
+    colors = plt.cm.tab10(
+        np.linspace(0, 1, len(paths))
     )
 
-    # Trajetória real do veículo
-    ax.plot(
-        X, Y,
-        color='blue',
-        linewidth=2,
-        label='Trajetória do veículo',
-        zorder=4
-    )
-
-    # Posição inicial
-    ax.scatter(
-        X[0], Y[0],
-        color='lime',
-        edgecolors='black',
-        s=100,
-        marker='o',
-        label='Início',
-        zorder=5
-    )
-
-    # Posição final
-    ax.scatter(
-        X[-1], Y[-1],
-        color='red',
-        edgecolors='black',
-        s=100,
-        marker='X',
-        label='Final',
-        zorder=5
-    )
-
-    # Orientação inicial e final
     arrow_length = CELL_WIDTH * 0.5
 
-    for idx, label in [(0, 'Inicial'), (-1, 'Final')]:
-        ax.quiver(
-            X[idx], Y[idx],
-            np.cos(psi[idx]),
-            np.sin(psi[idx]),
-            angles='xy',
-            scale_units='xy',
-            scale=1 / arrow_length,
-            color='black',
-            width=0.005,
-            zorder=6
+    for idx, (states, color) in enumerate(zip(paths, colors)):
+
+        X = np.array([state.X for state in states])
+        Y = np.array([state.Y for state in states])
+        psi = np.array([state.psi for state in states])
+
+        label = f'Trajetória {idx + 1}'
+
+        # Trajetória
+        ax.plot(
+            X, Y,
+            color=color,
+            linewidth=2,
+            label=label,
+            zorder=4
         )
+
+        # Posição inicial
+        ax.scatter(
+            X[0], Y[0],
+            color=color,
+            edgecolors='black',
+            s=80,
+            marker='o',
+            zorder=5
+        )
+
+        # Posição final
+        ax.scatter(
+            X[-1], Y[-1],
+            color=color,
+            edgecolors='black',
+            s=80,
+            marker='X',
+            zorder=5
+        )
+
+        # Orientação inicial e final
+        for i in [0, -1]:
+            ax.quiver(
+                X[i], Y[i],
+                np.cos(psi[i]),
+                np.sin(psi[i]),
+                angles='xy',
+                scale_units='xy',
+                scale=1 / arrow_length,
+                color=color,
+                width=0.005,
+                zorder=6
+            )
+
+        # Orientações intermediárias
+        for i in range(50, len(states), 50):
+            ax.quiver(
+                X[i], Y[i],
+                np.cos(psi[i]),
+                np.sin(psi[i]),
+                angles='xy',
+                scale_units='xy',
+                scale=1 / arrow_length,
+                color=color,
+                width=0.005,
+                alpha=0.7,
+                zorder=6
+            )
 
     # Limites do mapa
     ax.set_xlim(0, cols * CELL_WIDTH)
@@ -335,11 +430,9 @@ def plot_trajectory(
 
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
-    ax.set_title('Trajetória do veículo e caminho Dijkstra')
+    ax.set_title('Comparação de trajetórias')
 
     ax.legend(loc='upper right')
 
     plt.tight_layout()
     plt.show()
-
-

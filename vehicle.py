@@ -6,7 +6,8 @@ from problem_model import model
 from classes import WeelTork, Vehicle_state, CarParams
 
 
-def vehicle_dynamics(T: WeelTork, state: Vehicle_state, params: CarParams, dt) -> Vehicle_state:
+def vehicle_dynamics(T: WeelTork, state: Vehicle_state, params: CarParams, dt: float) -> Vehicle_state:
+    """Utiliza o estado atual e o torque aplicado para calcular o estado do carrinho no proximo instante de tempo."""
 
     # Estado atual
     X = state.X
@@ -88,6 +89,7 @@ def generate_torque_reference(
     Kd_psi: float = 2.0,
     Kp_v: float = 20.0
 ) -> tuple[list[WeelTork], list[Vehicle_state]]:
+    """Gera as referencias de torque necessária para ir de um ponto a outro."""
 
     torques_referencia = []
     estados_calculados = []

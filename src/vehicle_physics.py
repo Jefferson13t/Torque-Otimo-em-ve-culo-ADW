@@ -1,10 +1,8 @@
 import numpy as np
-import math
 
-from problem_model import model
+from src.problem_model import model
 
-from classes import WeelTork, Vehicle_state, CarParams
-
+from src.classes import WeelTork, Vehicle_state, CarParams
 
 def vehicle_dynamics(T: WeelTork, state: Vehicle_state, params: CarParams, dt: float) -> Vehicle_state:
     """Utiliza o estado atual e o torque aplicado para calcular o estado do carrinho no proximo instante de tempo."""

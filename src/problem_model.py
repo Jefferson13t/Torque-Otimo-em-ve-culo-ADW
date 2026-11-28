@@ -2,7 +2,7 @@ import numpy as np
 
 from pymoo.core.problem import ElementwiseProblem
 
-from classes import WeelTork, CarParams, Reference
+from src.classes import WeelTork, CarParams, Reference
 
 def model(T: WeelTork, params: CarParams):
     """
